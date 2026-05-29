@@ -3,15 +3,17 @@ from tempfile import NamedTemporaryFile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
+from app.ai_client import AIClient, MissingApiKeyError
 from app.config import Settings, get_settings
 from app.docx_service import DocxService
-from app.models import ProjectState, TextBlock, UpdateBlockRequest
+from app.models import ProjectState, SuggestRequest, SuggestResponse, TextBlock, UpdateBlockRequest
 from app.project_store import ProjectStore
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, ai_client: AIClient | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     store = ProjectStore(resolved_settings.data_dir, DocxService())
+    resolved_ai_client = ai_client or AIClient(resolved_settings)
     app = FastAPI(title="Bilingual DOCX Sync")
     app.state.project_store = store
 
@@ -41,6 +43,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return store.update_block(project_id, block_id, request.text, request.status)
         except KeyError:
             raise HTTPException(status_code=404, detail="未找到对应段落。")
+
+    @app.post("/api/projects/{project_id}/suggest", response_model=SuggestResponse)
+    async def suggest(project_id: str, request: SuggestRequest) -> SuggestResponse:
+        try:
+            suggestion = await resolved_ai_client.suggest(
+                direction=request.direction,
+                source_text=request.source_text,
+                target_text=request.target_text,
+            )
+        except MissingApiKeyError:
+            raise HTTPException(status_code=400, detail="未配置 API Key，请在 .env 中设置。")
+        except Exception:
+            raise HTTPException(status_code=502, detail="同步建议生成失败，请稍后重试。")
+        if not suggestion:
+            raise HTTPException(status_code=502, detail="模型返回内容为空，请重试。")
+        return SuggestResponse(suggestion=suggestion)
 
     return app
 

@@ -1,5 +1,6 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -31,33 +32,33 @@ class TextBlock(BaseModel):
     index: int
     text: str
     path: str
-    mapped_id: str | None = Field(default=None, alias="mappedId")
+    mapped_id: Annotated[str | None, Field(alias="mappedId")] = None
     status: BlockStatus = BlockStatus.CLEAN
 
 
 class MappingPair(BaseModel):
-    en_id: str | None = Field(default=None, alias="enId")
-    zh_id: str | None = Field(default=None, alias="zhId")
+    en_id: Annotated[str | None, Field(alias="enId")] = None
+    zh_id: Annotated[str | None, Field(alias="zhId")] = None
     index: int
     mapped: bool
 
 
 class ProjectState(BaseModel):
-    project_id: str = Field(alias="projectId")
-    en_filename: str = Field(alias="enFilename")
-    zh_filename: str = Field(alias="zhFilename")
-    en_blocks: list[TextBlock] = Field(alias="enBlocks")
-    zh_blocks: list[TextBlock] = Field(alias="zhBlocks")
+    project_id: Annotated[str, Field(alias="projectId")]
+    en_filename: Annotated[str, Field(alias="enFilename")]
+    zh_filename: Annotated[str, Field(alias="zhFilename")]
+    en_blocks: Annotated[list[TextBlock], Field(alias="enBlocks")]
+    zh_blocks: Annotated[list[TextBlock], Field(alias="zhBlocks")]
     mappings: list[MappingPair]
     warnings: list[str] = []
 
 
 class SuggestRequest(BaseModel):
     direction: str
-    source_block_id: str = Field(alias="sourceBlockId")
-    target_block_id: str = Field(alias="targetBlockId")
-    source_text: str = Field(alias="sourceText")
-    target_text: str = Field(alias="targetText")
+    source_block_id: Annotated[str, Field(alias="sourceBlockId")]
+    target_block_id: Annotated[str, Field(alias="targetBlockId")]
+    source_text: Annotated[str, Field(alias="sourceText")]
+    target_text: Annotated[str, Field(alias="targetText")]
 
 
 class SuggestResponse(BaseModel):
@@ -70,8 +71,8 @@ class UpdateBlockRequest(BaseModel):
 
 
 class ExportResponse(BaseModel):
-    en_download_url: str = Field(alias="enDownloadUrl")
-    zh_download_url: str = Field(alias="zhDownloadUrl")
+    en_download_url: Annotated[str, Field(alias="enDownloadUrl")]
+    zh_download_url: Annotated[str, Field(alias="zhDownloadUrl")]
 
 
 class StoredProject(BaseModel):

@@ -81,3 +81,22 @@ def test_rejects_non_docx_uploads(tmp_path):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "请上传 .docx 格式的 Word 文件。"
+
+
+def test_suggest_without_api_key_returns_chinese_error(tmp_path):
+    app = create_app(Settings(data_dir=tmp_path / "projects", openai_api_key="", openai_model="test-model"))
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/projects/demo/suggest",
+        json={
+            "direction": "en_to_zh",
+            "sourceBlockId": "en-00000",
+            "targetBlockId": "zh-00000",
+            "sourceText": "Updated English.",
+            "targetText": "原中文。",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "未配置 API Key，请在 .env 中设置。"
