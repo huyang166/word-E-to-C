@@ -51,6 +51,22 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.download-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.download-links a {
+  color: #1d4ed8;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

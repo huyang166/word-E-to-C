@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { createProject, requestSuggestion, updateBlock } from "./api";
+import { createProject, exportProject, requestSuggestion, updateBlock } from "./api";
 import "./App.css";
 import { statusLabel } from "./statusLabels";
 import type { BlockStatus, ProjectState, TextBlock } from "./types";
@@ -19,6 +19,10 @@ export default function App() {
   const [direction, setDirection] = useState<Direction>("en_to_zh");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [downloadLinks, setDownloadLinks] = useState<{
+    enDownloadUrl: string;
+    zhDownloadUrl: string;
+  } | null>(null);
 
   const selectedPair = useMemo(() => {
     if (!project) return null;
@@ -128,6 +132,23 @@ export default function App() {
     setMessage("已确认写回。");
   }
 
+  async function exportDocuments() {
+    if (!project) {
+      setMessage("请先上传并解析 Word。");
+      return;
+    }
+    setBusy(true);
+    try {
+      const links = await exportProject(project.projectId);
+      setDownloadLinks(links);
+      setMessage("导出完成，请下载更新后的 Word 文件。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "导出失败，请稍后重试。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function renderBlock(block: TextBlock | null, index: number, language: "英文" | "中文") {
     if (!block) {
       return (
@@ -176,12 +197,19 @@ export default function App() {
         <button type="button" onClick={parseDocuments} disabled={busy}>
           解析文档
         </button>
-        <button type="button" disabled={!project || busy}>
+        <button type="button" onClick={exportDocuments} disabled={!project || busy}>
           导出更新后的 Word
         </button>
       </header>
 
       {message && <div className="message">{message}</div>}
+
+      {downloadLinks && (
+        <div className="download-links">
+          <a href={downloadLinks.enDownloadUrl}>下载更新后的英文 Word</a>
+          <a href={downloadLinks.zhDownloadUrl}>下载更新后的中文 Word</a>
+        </div>
+      )}
 
       <section className="editor-grid">
         <article className="panel">

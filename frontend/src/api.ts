@@ -47,3 +47,14 @@ export async function updateBlock(input: {
     }),
   );
 }
+
+export async function exportProject(projectId: string): Promise<{
+  enDownloadUrl: string;
+  zhDownloadUrl: string;
+}> {
+  return readJson(
+    await fetch(`/api/projects/${projectId}/export`, {
+      method: "POST",
+    }),
+  );
+}

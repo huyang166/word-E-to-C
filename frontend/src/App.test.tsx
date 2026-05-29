@@ -102,3 +102,45 @@ it("上传解析后显示双栏段落并允许生成同步建议", async () => {
 
   expect(await screen.findByDisplayValue("更新后的中文。")).toBeInTheDocument();
 });
+
+it("导出后显示更新后的 Word 下载链接", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          projectId: "demo",
+          enFilename: "en.docx",
+          zhFilename: "zh.docx",
+          enBlocks: [],
+          zhBlocks: [],
+          mappings: [],
+          warnings: [],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          enDownloadUrl: "/api/projects/demo/download/updated-en.docx",
+          zhDownloadUrl: "/api/projects/demo/download/updated-zh.docx",
+        }),
+      }),
+  );
+
+  render(<App />);
+  await user.upload(screen.getByLabelText("上传英文 Word"), new File(["en"], "en.docx"));
+  await user.upload(screen.getByLabelText("上传中文 Word"), new File(["zh"], "zh.docx"));
+  await user.click(screen.getByRole("button", { name: "解析文档" }));
+  await user.click(await screen.findByRole("button", { name: "导出更新后的 Word" }));
+
+  expect(await screen.findByRole("link", { name: "下载更新后的英文 Word" })).toHaveAttribute(
+    "href",
+    "/api/projects/demo/download/updated-en.docx",
+  );
+  expect(screen.getByRole("link", { name: "下载更新后的中文 Word" })).toHaveAttribute(
+    "href",
+    "/api/projects/demo/download/updated-zh.docx",
+  );
+});
