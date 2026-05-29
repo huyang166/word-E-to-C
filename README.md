@@ -27,6 +27,12 @@ DATA_DIR=data/projects
 
 如果使用 OpenAI-compatible 服务，修改 `OPENAI_BASE_URL` 和 `OPENAI_MODEL`。
 
+## 一键启动
+
+Windows 用户可以直接双击项目根目录的 `start-local.bat`。
+
+脚本会检查 `.env`、Python 虚拟环境和前端依赖，然后启动后端与前端，并自动打开 `http://127.0.0.1:5173/`。关闭脚本打开的 Backend 和 Frontend 两个命令窗口即可停止服务。
+
 ## 启动后端
 
 ```powershell
