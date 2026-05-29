@@ -44,6 +44,39 @@ class DocxService:
 
         return blocks
 
+    def export_with_replacements(
+        self,
+        source_path: Path,
+        output_path: Path,
+        replacements: dict[str, str],
+    ) -> None:
+        document = Document(source_path)
+        for block_path, replacement_text in replacements.items():
+            paragraph = self._resolve_paragraph(document, block_path)
+            self._replace_paragraph_text(paragraph, replacement_text)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        document.save(output_path)
+
+    def _resolve_paragraph(self, document, block_path: str) -> Paragraph:
+        parts = block_path.split(":")
+        if parts[0] == "p":
+            return document.paragraphs[int(parts[1])]
+        if parts[0] == "table":
+            table_index = int(parts[1])
+            row_index = int(parts[3])
+            cell_index = int(parts[5])
+            paragraph_index = int(parts[7])
+            return document.tables[table_index].rows[row_index].cells[cell_index].paragraphs[paragraph_index]
+        raise ValueError(f"Unsupported block path: {block_path}")
+
+    def _replace_paragraph_text(self, paragraph: Paragraph, text: str) -> None:
+        if paragraph.runs:
+            paragraph.runs[0].text = text
+            for run in paragraph.runs[1:]:
+                run.text = ""
+            return
+        paragraph.add_run(text)
+
     def _block_from_paragraph(
         self,
         paragraph: Paragraph,
