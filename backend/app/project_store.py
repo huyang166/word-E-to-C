@@ -67,3 +67,23 @@ class ProjectStore:
                 block.status = status
                 return block
         raise KeyError(block_id)
+
+    def export_project(self, project_id: str) -> tuple[Path, Path]:
+        project = self.get_project(project_id)
+        export_dir = project.root / "exports"
+        en_output = export_dir / "updated-en.docx"
+        zh_output = export_dir / "updated-zh.docx"
+
+        en_replacements = {
+            block.path: block.text
+            for block in project.state.en_blocks
+            if block.status == BlockStatus.MODIFIED
+        }
+        zh_replacements = {
+            block.path: block.text
+            for block in project.state.zh_blocks
+            if block.status == BlockStatus.MODIFIED
+        }
+        self.docx_service.export_with_replacements(project.en_original, en_output, en_replacements)
+        self.docx_service.export_with_replacements(project.zh_original, zh_output, zh_replacements)
+        return en_output, zh_output

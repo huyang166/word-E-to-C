@@ -2,11 +2,12 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from app.ai_client import AIClient, MissingApiKeyError
 from app.config import Settings, get_settings
 from app.docx_service import DocxService
-from app.models import ProjectState, SuggestRequest, SuggestResponse, TextBlock, UpdateBlockRequest
+from app.models import ExportResponse, ProjectState, SuggestRequest, SuggestResponse, TextBlock, UpdateBlockRequest
 from app.project_store import ProjectStore
 
 
@@ -59,6 +60,34 @@ def create_app(settings: Settings | None = None, ai_client: AIClient | None = No
         if not suggestion:
             raise HTTPException(status_code=502, detail="模型返回内容为空，请重试。")
         return SuggestResponse(suggestion=suggestion)
+
+    @app.post("/api/projects/{project_id}/export", response_model=ExportResponse)
+    def export(project_id: str) -> ExportResponse:
+        try:
+            store.export_project(project_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="未找到项目。")
+        return ExportResponse(
+            enDownloadUrl=f"/api/projects/{project_id}/download/updated-en.docx",
+            zhDownloadUrl=f"/api/projects/{project_id}/download/updated-zh.docx",
+        )
+
+    @app.get("/api/projects/{project_id}/download/{filename}")
+    def download(project_id: str, filename: str) -> FileResponse:
+        if filename not in {"updated-en.docx", "updated-zh.docx"}:
+            raise HTTPException(status_code=404, detail="未找到导出文件。")
+        try:
+            project = store.get_project(project_id)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="未找到项目。")
+        path = project.root / "exports" / filename
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="请先导出更新后的 Word。")
+        return FileResponse(
+            path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=filename,
+        )
 
     return app
 

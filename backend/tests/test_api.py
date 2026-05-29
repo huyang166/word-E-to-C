@@ -100,3 +100,42 @@ def test_suggest_without_api_key_returns_chinese_error(tmp_path):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "未配置 API Key，请在 .env 中设置。"
+
+
+def test_exports_updated_docx_after_confirmed_replacement(tmp_path):
+    en_path = tmp_path / "en.docx"
+    zh_path = tmp_path / "zh.docx"
+    make_docx(en_path, "Introduction", "English body.")
+    make_docx(zh_path, "引言", "中文正文。")
+    app = create_app(Settings(data_dir=tmp_path / "projects", openai_api_key="", openai_model=""))
+    client = TestClient(app)
+
+    with en_path.open("rb") as en_file, zh_path.open("rb") as zh_file:
+        created = client.post(
+            "/api/projects",
+            files={
+                "en_file": (
+                    "en.docx",
+                    en_file,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+                "zh_file": (
+                    "zh.docx",
+                    zh_file,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+            },
+        ).json()
+
+    project_id = created["projectId"]
+    target_block_id = created["zhBlocks"][1]["id"]
+    client.patch(
+        f"/api/projects/{project_id}/blocks/{target_block_id}",
+        json={"text": "更新后的中文正文。", "status": "modified"},
+    )
+
+    response = client.post(f"/api/projects/{project_id}/export")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["zhDownloadUrl"].endswith("/updated-zh.docx")
